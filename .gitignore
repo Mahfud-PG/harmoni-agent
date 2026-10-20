@@ -55,3 +55,6 @@ bersihkan_nama.py
 .idea/
 Thumbs.db
 Desktop.ini
+
+*.db-shm
+*.db-wal
