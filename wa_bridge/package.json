@@ -1,0 +1,25 @@
+{
+  "name": "wa_bridge",
+  "version": "1.0.0",
+  "description": "WhatsApp Baileys Native Bridge untuk Harmoni Agent",
+  "main": "wa_bridge.js",
+  "scripts": {
+    "start": "node wa_bridge.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "whatsapp",
+    "baileys",
+    "assistant"
+  ],
+  "author": "Harmoni Agent",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4"
+  }
+}

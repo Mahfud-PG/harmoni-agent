@@ -1,0 +1,29 @@
+{
+  "mcp_enabled": true,
+  "servers": {
+    "spotify": {
+      "name": "Spotify Player",
+      "description": "Kendali pemutar musik Spotify di latar belakang",
+      "enabled": false,
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-spotify"
+      ],
+      "env": {},
+      "tools_cache": []
+    },
+    "youtube": {
+      "name": "YouTube Audio & Transcript",
+      "description": "Pencari audio dan transkrip video YouTube",
+      "enabled": false,
+      "command": "npx",
+      "args": [
+        "-y",
+        "youtube-transcript-mcp"
+      ],
+      "env": {},
+      "tools_cache": []
+    }
+  }
+}

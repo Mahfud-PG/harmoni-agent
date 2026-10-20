@@ -1,0 +1,89 @@
+# ============================================================================
+# Harmoni Agent - Daftar Paket Python
+# Dibuat: 28 September 2026
+#
+# Cara memasang (butuh Python 3.14):
+#     py -m pip install -r requirements.txt
+#
+# Catatan: versi dipaku (==) memakai versi yang sudah terbukti jalan di
+# Python 3.14.6 pada komputer pengembang, supaya hasilnya sama di mana pun.
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# WAJIB - inti aplikasi (tanpa ini aplikasi tidak bisa menyala)
+# ---------------------------------------------------------------------------
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.13.4
+python-dotenv==1.2.2
+requests==2.34.2
+
+# Antarmuka jendela desktop (WebView2)
+pywebview==6.2.1
+
+# Otak AI
+openai==2.45.0
+google-generativeai==0.8.6
+groq==1.6.0
+
+# Bot Telegram
+python-telegram-bot==22.8
+
+# ---------------------------------------------------------------------------
+# SUARA & AUDIO (voice note, pesan suara, pembaca teks)
+# ---------------------------------------------------------------------------
+edge-tts==7.2.8
+pyttsx3==2.99
+sounddevice==0.5.5
+soundfile==0.14.0
+librosa==0.11.0
+numpy==2.4.6
+
+# ---------------------------------------------------------------------------
+# KENDALI SISTEM WINDOWS (khusus Windows)
+# ---------------------------------------------------------------------------
+pywin32==312
+comtypes==1.4.16
+pycaw==20251023
+pyautogui==0.9.54
+pyperclip==1.11.0
+psutil==7.2.2
+uiautomation==2.0.29
+accessible_output2==0.17
+
+# ---------------------------------------------------------------------------
+# DOKUMEN & BERKAS
+# ---------------------------------------------------------------------------
+pillow==12.3.0
+opencv-python==5.0.0.93
+PyPDF2==3.0.1
+python-docx==1.2.0
+fpdf2==2.8.7
+beautifulsoup4==4.15.0
+
+# ---------------------------------------------------------------------------
+# GOOGLE DRIVE, YOUTUBE & TIKTOK (opsional - hanya bila fiturnya dipakai)
+# ---------------------------------------------------------------------------
+google-api-python-client==2.198.0
+google-auth-oauthlib==1.4.0
+python-dateutil==2.9.0.post0
+yt-dlp==2026.8.27.3630.dev0
+playwright==1.63.0
+pywhatkit==5.4
+
+# ---------------------------------------------------------------------------
+# CATATAN PENTING
+# ---------------------------------------------------------------------------
+# 1) Selain paket di atas, Harmoni juga memerlukan program di luar Python:
+#       - Node.js           -> untuk WhatsApp Bridge (folder wa_bridge)
+#       - ffmpeg dan ffplay -> untuk memproses audio (sudah satu paket)
+#       - WebView2 Runtime  -> sudah bawaan Windows 11; Windows 10 perlu dipasang
+#
+# 2) Setelah memasang playwright, browser-nya perlu diunduh terpisah:
+#       py -m playwright install chromium
+#
+# 3) Beberapa modul TIDAK dicantumkan karena dibuat otomatis oleh fitur
+#    "Rakit Keahlian" (Skill Forge) saat dipakai, bukan paket dari internet:
+#       pembuat_video_lirik, pencari_chord, suntik_cover_mp3
+#    Semuanya dipanggil di dalam blok pengaman, jadi aplikasi tetap jalan
+#    meski modul itu belum ada.

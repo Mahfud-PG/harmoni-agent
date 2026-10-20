@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pemasangan Pertama - Harmoni Agent</title>
+<style>
+  :root { color-scheme: dark; --aksen:#4c8bf5; }
+  body {
+    background:#0f1115; color:#e8eaf0; margin:0;
+    font-family:"Segoe UI",Tahoma,sans-serif; font-size:17px; line-height:1.6;
+  }
+  main { max-width:760px; margin:0 auto; padding:24px 20px 130px; }
+  h1 { font-size:24px; margin:0 0 6px; }
+  
+  /* Wizard Progress Steps */
+  .step-indicator {
+    display:flex; gap:8px; margin:16px 0 24px; flex-wrap:wrap;
+  }
+  .step-badge {
+    padding:6px 12px; border-radius:20px; font-size:13px; font-weight:600;
+    background:#1c212c; color:#8b93a5; border:1px solid #2d3545;
+  }
+  .step-badge.active {
+    background:#1f6feb; color:#fff; border-color:#388bfd;
+  }
+  .step-badge.done {
+    background:#103b29; color:#4ade80; border-color:#238636;
+  }
+
+  /* Wizard Step Section */
+  .wizard-step {
+    display:none;
+    background:#171a21; border:1px solid #262b36; border-radius:10px;
+    padding:22px 24px; margin:0 0 16px;
+  }
+  .wizard-step.active { display:block; }
+  .wizard-step h2 { font-size:21px; margin:0 0 6px; color:#fff; }
+  
+  .catatan { color:#9aa3b4; font-size:15px; margin:0 0 16px; }
+  .wajib { color:#ffd166; font-weight:600; }
+  label { display:block; margin:14px 0 6px; font-weight:600; font-size:15px; }
+  
+  input[type=text], input[type=password], input[type=email], select {
+    width:100%; box-sizing:border-box; padding:11px 13px; font-size:16px;
+    background:#0f1115; color:#e8eaf0; border:1px solid #333a49; border-radius:7px;
+  }
+  input:focus, select:focus { outline:3px solid var(--aksen); outline-offset:1px; }
+  
+  button {
+    font-size:15px; padding:10px 16px; margin:12px 8px 0 0; cursor:pointer;
+    background:#2a3140; color:#e8eaf0; border:1px solid #3c4557; border-radius:7px;
+  }
+  button:hover { background:#343d4f; }
+  button:focus { outline:3px solid var(--aksen); outline-offset:1px; }
+  button.utama { background:#1f6feb; border-color:#1f6feb; color:#fff; font-weight:600; }
+  button.utama:hover { background:#2b7cf7; }
+  button.next-btn { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:700; }
+  button.next-btn:hover { background:#115e59; }
+
+  .pesan { margin-top:12px; min-height:22px; font-size:15px; }
+  .pesan.ok { color:#4ade80; }
+  .pesan.gagal { color:#f87171; }
+  .pesan.info { color:#93c5fd; }
+
+  /* Navigasi Bawah Wizard */
+  .wizard-nav {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:24px; padding-top:16px; border-top:1px solid #262b36;
+    flex-wrap:wrap; gap:10px;
+  }
+  .wizard-nav .nav-right { display:flex; gap:8px; margin-left:auto; }
+
+  .bar {
+    position:fixed; left:0; right:0; bottom:0; background:#12151c;
+    border-top:1px solid #262b36; padding:12px 20px; display:flex;
+    gap:12px; align-items:center; justify-content:space-between;
+  }
+  .bar .status { color:#9aa3b4; font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧭 Panduan Pemasangan Harmoni Agent</h1>
+  <p class="catatan">
+    Langkah demi langkah penyiapan asisten. Tekan <strong>Tab</strong> untuk navigasi, isi atau lewati dengan tombol <strong>Lanjut</strong>.
+  </p>
+
+  <!-- Indikator Langkah -->
+  <div class="step-indicator" role="tablist" aria-label="Langkah Pemasangan">
+    <span class="step-badge active" id="badge-1">1. Nama</span>
+    <span class="step-badge" id="badge-2">2. Otak AI</span>
+    <span class="step-badge" id="badge-3">3. Suara</span>
+    <span class="step-badge" id="badge-4">4. Telegram</span>
+    <span class="step-badge" id="badge-5">5. WhatsApp</span>
+    <span class="step-badge" id="badge-6">6. Email</span>
+    <span class="step-badge" id="badge-7">7. Google</span>
+    <span class="step-badge" id="badge-8">8. Selesai</span>
+  </div>
+
+  <!-- STEP 1: NAMA -->
+  <section class="wizard-step active" id="step-1" aria-labelledby="j1">
+    <h2 id="j1">1. Bahasa &amp; Personalisasi</h2>
+    <p class="catatan">Pilih bahasa aplikasi serta nama panggilan Anda dan nama asisten.</p>
+    
+    <label for="pilih-bahasa">Bahasa Aplikasi / App Language:</label>
+    <select id="pilih-bahasa">
+      <option value="en" selected>🇺🇸 English (Default)</option>
+      <option value="id">🇮🇩 Bahasa Indonesia</option>
+    </select>
+
+    <label for="nama-pengguna">Anda ingin dipanggil siapa?</label>
+    <input type="text" id="nama-pengguna" placeholder="Contoh: Budi, Mas, Kak, Bos / John" autocomplete="off">
+    <label for="nama-asisten">Nama asistennya siapa?</label>
+    <input type="text" id="nama-asisten" value="Harmoni" autocomplete="off">
+    <div class="pesan" id="pesan-1" role="status" aria-live="polite"></div>
+    
+    <div class="wizard-nav">
+      <button type="button" onclick="simpanNama()">💾 Simpan Pengaturan Ini</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(2)">Lanjut ke Otak AI ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: OTAK AI (WAJIB) -->
+  <section class="wizard-step" id="step-2" aria-labelledby="j2">
+    <h2 id="j2">2. Otak AI <span class="wajib">(WAJIB)</span></h2>
+    <p class="catatan">
+      Pilih layanan AI yang Anda pakai. Masukkan kunci API (API Key) penyedia tersebut.
+      Bagi pengguna 9Router lokal (Antigravity), pilih <strong>9Router</strong> (bisa isi '9router-local' atau API key 9Router).
+    </p>
+    <label for="penyedia-ai">Pilih Layanan / Provider AI:</label>
+    <select id="penyedia-ai">
+      <option value="9router">9Router (Antigravity &amp; Cursor Lokal)</option>
+      <option value="deepseek" selected>DeepSeek Resmi (Termurah &amp; Sangat Cerdas)</option>
+      <option value="gemini">Google Gemini Resmi (AI Studio)</option>
+      <option value="groq">Groq Cloud (LPU Ultra Cepat)</option>
+      <option value="openai">OpenAI Resmi (GPT-4o / o1)</option>
+      <option value="openrouter">OpenRouter (Katalog 400+ Model Dunia)</option>
+      <option value="alibaba">Alibaba Cloud Qwen</option>
+      <option value="mimo">Xiaomi MiMo</option>
+    </select>
+    <label for="kunci-ai">Kunci API (API Key):</label>
+    <input type="password" id="kunci-ai" placeholder="Tempel kunci API di sini (sk-... / AIzaSy... / 9router-local)" autocomplete="off">
+    <div class="pesan" id="pesan-2" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(1)">⬅ Kembali</button>
+      <button type="button" class="utama" onclick="simpanKunciAI()">💾 Simpan Kunci AI</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(3)">Lanjut ke Suara ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: SUARA -->
+  <section class="wizard-step" id="step-3" aria-labelledby="j3">
+    <h2 id="j3">3. Suara Asisten &amp; TTS</h2>
+    <p class="catatan">Asisten bisa membacakan jawabannya lewat suara speaker PC. (Opsional, boleh dilewati).</p>
+    <label for="suara-jenis">Karakter Suara Indonesia:</label>
+    <select id="suara-jenis">
+      <option value="id-ID-GadisNeural">Gadis Neural (Wanita - Ramah &amp; Jelas)</option>
+      <option value="id-ID-ArdiNeural">Ardi Neural (Pria - Tegas &amp; Sopan)</option>
+    </select>
+    <label for="suara-penyedia">Mesin Pembaca Suara:</label>
+    <select id="suara-penyedia">
+      <option value="edge-tts">Edge-TTS (Bawaan Windows - Gratis &amp; Sangat Cepat)</option>
+      <option value="gemini-tts">Google Gemini TTS (AI Studio)</option>
+      <option value="elevenlabs">ElevenLabs Studio (Perlu Kunci API)</option>
+      <option value="google">Google Cloud TTS (Perlu Kunci API)</option>
+    </select>
+    <div class="pesan" id="pesan-3" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(2)">⬅ Kembali</button>
+      <button type="button" onclick="simpanSuara()">💾 Simpan Suara</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(4)">Lanjut ke Telegram ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4: TELEGRAM -->
+  <section class="wizard-step" id="step-4" aria-labelledby="j4">
+    <h2 id="j4">4. Sambungan Bot Telegram</h2>
+    <p class="catatan">
+      Memungkinkan Anda mengobrol dan menyuruh asisten dari HP lewat Telegram. (Boleh dilewati).
+    </p>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <label for="tg-token" style="margin-top:0;">Token Bot Telegram:</label>
+      <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" style="font-size:0.85rem; color:var(--aksen);">🤖 Buka @BotFather</a>
+    </div>
+    <input type="password" id="tg-token" placeholder="Tempel token bot (contoh: 123456789:ABCdef...)" autocomplete="off">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+      <label for="tg-chatid" style="margin-top:0;">Chat ID Pemilik:</label>
+      <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" style="font-size:0.85rem; color:var(--aksen);">🆔 Cek di @userinfobot</a>
+    </div>
+    <input type="text" id="tg-chatid" placeholder="ID Telegram Anda (contoh: 123456789)" autocomplete="off">
+    <div class="pesan" id="pesan-4" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(3)">⬅ Kembali</button>
+      <button type="button" onclick="simpanTelegram()">💾 Simpan Telegram</button>
+      <button type="button" onclick="ujiTelegram()">🔍 Uji Sambungan</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(5)">Lanjut ke WhatsApp ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5: WHATSAPP -->
+  <section class="wizard-step" id="step-5" aria-labelledby="j5">
+    <h2 id="j5">5. WhatsApp Admin (Multi-Nomor)</h2>
+    <p class="catatan">
+      Harmoni bisa membalas chat WhatsApp pelanggan secara otomatis dengan AI. (Boleh dilewati).
+      Tautkan nomor HP lewat kode pairing 8-angka di menu Pengaturan.
+    </p>
+    <div class="pesan" id="pesan-5" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(4)">⬅ Kembali</button>
+      <button type="button" onclick="tambahWhatsapp()">➕ Buat Profil WA Pertama</button>
+      <button type="button" onclick="cekWhatsapp()">📡 Cek Status WA</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(6)">Lanjut ke Email ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 6: EMAIL -->
+  <section class="wizard-step" id="step-6" aria-labelledby="j6">
+    <h2 id="j6">6. Email (Gmail)</h2>
+    <p class="catatan">
+      Asisten bisa membaca email masuk dan mengirim surat otomatis. Gunakan <strong>Sandi Aplikasi (App Password) 16 huruf</strong> dari Google, bukan sandi login biasa. (Boleh dilewati).
+    </p>
+    <label for="email-alamat">Alamat Email:</label>
+    <input type="email" id="email-alamat" placeholder="contoh: nama.studio@gmail.com" autocomplete="off">
+    <label for="email-sandi">Sandi Aplikasi Google (16 Karakter):</label>
+    <input type="password" id="email-sandi" placeholder="Tempel 16 huruf sandi aplikasi" autocomplete="off">
+    <div class="pesan" id="pesan-6" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(5)">⬅ Kembali</button>
+      <button type="button" onclick="simpanEmail()">💾 Simpan Email</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(7)">Lanjut ke Google Drive ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 7: GOOGLE DRIVE & YOUTUBE -->
+  <section class="wizard-step" id="step-7" aria-labelledby="j7">
+    <h2 id="j7">7. Google Drive &amp; YouTube</h2>
+    <p class="catatan">
+      Menyambungkan Drive dan channel YouTube milik Anda sendiri. (Boleh dilewati).
+      Tekan tombol di bawah untuk membuka izin resmi Google di peramban.
+    </p>
+    <div class="pesan" id="pesan-7" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(6)">⬅ Kembali</button>
+      <button type="button" onclick="hubungkanGoogle()">🔗 Hubungkan Akun Google</button>
+      <button type="button" onclick="cekKoneksi()">📡 Cek Koneksi</button>
+      <div class="nav-right">
+        <button type="button" class="next-btn" onclick="keLangkah(8)">Lanjut ke Selesai ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 8: SELESAI -->
+  <section class="wizard-step" id="step-8" aria-labelledby="j8">
+    <h2 id="j8">8. Penyiapan Selesai! 🎉</h2>
+    <p class="catatan">
+      Semua penyiapan awal sudah selesai. Bagian yang tadi Anda lewati dapat diisi atau diubah kapan saja lewat tombol <strong>Pengaturan</strong> di layar utama.
+    </p>
+    <div class="pesan" id="pesan-8" role="status" aria-live="polite"></div>
+
+    <div class="wizard-nav">
+      <button type="button" onclick="keLangkah(7)">⬅ Kembali</button>
+      <div class="nav-right">
+        <button type="button" class="utama" style="font-size:16px; padding:12px 22px;" onclick="selesaikan()">🚀 Mulai Gunakan Harmoni Agent</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="bar">
+  <span class="status" id="status-umum" role="status" aria-live="polite">Langkah 1 dari 8: Nama &amp; Panggilan</span>
+  <button type="button" onclick="cekBerkas()">🔍 Ringkasan Terisi</button>
+</div>
+
+<script>
+const GATEWAY = "http://127.0.0.1:8001";
+let langkahSekarang = 1;
+const TOTAL_LANGKAH = 8;
+
+function keLangkah(no) {
+  if (no < 1 || no > TOTAL_LANGKAH) return;
+  
+  // Sembunyikan langkah lama
+  const stepLama = document.getElementById("step-" + langkahSekarang);
+  const badgeLama = document.getElementById("badge-" + langkahSekarang);
+  if (stepLama) stepLama.classList.remove("active");
+  if (badgeLama) {
+    badgeLama.classList.remove("active");
+    if (no > langkahSekarang) badgeLama.classList.add("done");
+  }
+
+  // Tampilkan langkah baru
+  langkahSekarang = no;
+  const stepBaru = document.getElementById("step-" + no);
+  const badgeBaru = document.getElementById("badge-" + no);
+  if (stepBaru) {
+    stepBaru.classList.add("active");
+    const h2 = stepBaru.querySelector("h2");
+    if (h2) {
+      h2.setAttribute("tabindex", "-1");
+      h2.focus();
+    }
+  }
+  if (badgeBaru) {
+    badgeBaru.classList.add("active");
+    badgeBaru.classList.remove("done");
+  }
+
+  statusUmum(`Langkah ${no} dari ${TOTAL_LANGKAH}: ${badgeBaru ? badgeBaru.textContent : ''}`);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function tulis(id, teks, jenis) {
+  const el = document.getElementById("pesan-" + id);
+  if (!el) return;
+  el.textContent = teks;
+  el.className = "pesan " + (jenis || "");
+}
+
+function statusUmum(teks) {
+  document.getElementById("status-umum").textContent = teks;
+}
+
+async function kirim(jalur, data) {
+  const r = await fetch(GATEWAY + jalur, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  let isi = {};
+  try { isi = await r.json(); } catch (e) { isi = {}; }
+  return { kode: r.status, isi: isi };
+}
+
+async function ambil(jalur) {
+  const r = await fetch(GATEWAY + jalur);
+  let isi = {};
+  try { isi = await r.json(); } catch (e) { isi = {}; }
+  return { kode: r.status, isi: isi };
+}
+
+let PERS_TERKINI = null;
+
+async function ambilPers() {
+  if (PERS_TERKINI) return PERS_TERKINI;
+  const h = await ambil("/personalization");
+  const d = (h.isi && (h.isi.data || h.isi)) || {};
+  PERS_TERKINI = {
+    bot_name: d.bot_name || "Harmoni",
+    user_call_name: d.user_call_name || "Kak",
+    tone: d.tone || "santai",
+    enthusiasm: d.enthusiasm || "normal",
+    emoji_level: d.emoji_level || "sedikit",
+    format_style: d.format_style || "default",
+    custom_instructions: d.custom_instructions || "",
+    voice_provider: d.voice_provider || "edge-tts",
+    voice_type: d.voice_type || "id-ID-GadisNeural",
+    voice_rate: d.voice_rate || "+0%",
+    elevenlabs_voice_id: d.elevenlabs_voice_id || "21m00Tcm4TlvDq8ikWAM",
+    google_voice_name: d.google_voice_name || "id-ID-Wavenet-A",
+    openai_voice_name: d.openai_voice_name || "alloy",
+    temperature: (typeof d.temperature === "number") ? d.temperature : 0.7,
+    quality_gate_mode: d.quality_gate_mode || "safe"
+  };
+  return PERS_TERKINI;
+}
+
+async function simpanPers(ubah) {
+  const dasar = await ambilPers();
+  const gabung = Object.assign({}, dasar, ubah);
+  const h = await kirim("/personalization/save", gabung);
+  PERS_TERKINI = null;
+  return h;
+}
+
+// 1. Nama & Bahasa
+async function simpanNama() {
+  const lang = document.getElementById("pilih-bahasa").value || "en";
+  const nama = document.getElementById("nama-pengguna").value.trim();
+  const asisten = document.getElementById("nama-asisten").value.trim() || "Harmoni";
+  tulis(1, "Menyimpan...", "info");
+  try {
+    const h = await simpanPers({ app_language: lang, bot_name: asisten, user_call_name: nama });
+    if (h.kode === 200) {
+      tulis(1, "Tersimpan. Bahasa: " + (lang === "en" ? "English" : "Indonesia") + ", Panggilan: " + (nama || "-") + ".", "ok");
+      statusUmum("Pengaturan tersimpan. Silakan tekan Lanjut.");
+    } else {
+      tulis(1, "Gagal menyimpan (kode " + h.kode + ").", "gagal");
+    }
+  } catch (e) { tulis(1, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 2. Kunci AI
+async function simpanKunciAI() {
+  const penyedia = document.getElementById("penyedia-ai").value;
+  const kunci = document.getElementById("kunci-ai").value.trim();
+  if (!kunci) { tulis(2, "Kunci API masih kosong.", "gagal"); return; }
+  tulis(2, "Menyimpan kunci...", "info");
+  try {
+    const h = await kirim("/keys/set", { provider_name: penyedia, api_key: kunci });
+    if (h.kode === 200) {
+      document.getElementById("kunci-ai").value = "";
+      tulis(2, "Kunci AI (" + penyedia + ") berhasil disimpan!", "ok");
+      statusUmum("Kunci AI tersimpan. Silakan tekan Lanjut.");
+    } else {
+      tulis(2, "Gagal menyimpan kunci: " + (h.isi.detail || h.kode), "gagal");
+    }
+  } catch (e) { tulis(2, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 3. Suara
+async function simpanSuara() {
+  const jenis = document.getElementById("suara-jenis").value;
+  const penyedia = document.getElementById("suara-penyedia").value;
+  tulis(3, "Menyimpan...", "info");
+  try {
+    const h = await simpanPers({ voice_type: jenis, voice_provider: penyedia });
+    if (h.kode === 200) {
+      tulis(3, "Pengaturan suara tersimpan.", "ok");
+      statusUmum("Pengaturan suara disimpan.");
+    } else {
+      tulis(3, "Gagal menyimpan (kode " + h.kode + ").", "gagal");
+    }
+  } catch (e) { tulis(3, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 4. Telegram
+async function simpanTelegram() {
+  const token = document.getElementById("tg-token").value.trim();
+  const chat = document.getElementById("tg-chatid").value.trim();
+  if (!token) { tulis(4, "Token bot masih kosong.", "gagal"); return; }
+  tulis(4, "Menyimpan...", "info");
+  try {
+    const h = await kirim("/telegram/config", { token: token, chat_id: chat, enabled: true });
+    if (h.kode === 200) {
+      tulis(4, "Pengaturan Telegram tersimpan.", "ok");
+      statusUmum("Telegram tersimpan.");
+    } else {
+      tulis(4, "Gagal menyimpan (kode " + h.kode + ").", "gagal");
+    }
+  } catch (e) { tulis(4, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+async function ujiTelegram() {
+  tulis(4, "Menguji sambungan...", "info");
+  try {
+    const h = await ambil("/telegram/config");
+    tulis(4, h.kode === 200 ? "Sambungan Telegram aktif." : "Belum tersambung (kode " + h.kode + ").",
+          h.kode === 200 ? "ok" : "gagal");
+  } catch (e) { tulis(4, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 5. WhatsApp
+async function tambahWhatsapp() {
+  tulis(5, "Membuat profil...", "info");
+  try {
+    const h = await kirim("/whatsapp/add-profile", {});
+    tulis(5, h.kode === 200
+      ? "Profil WhatsApp dibuat. Anda bisa memasangkan nomor lewat menu Pengaturan."
+      : "Gagal membuat profil (kode " + h.kode + ").",
+      h.kode === 200 ? "ok" : "gagal");
+  } catch (e) { tulis(5, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+async function cekWhatsapp() {
+  tulis(5, "Memeriksa status...", "info");
+  try {
+    const h = await ambil("/whatsapp/status");
+    if (h.kode !== 200) { tulis(5, "Belum bisa diperiksa (kode " + h.kode + ").", "gagal"); return; }
+    const sesi = (h.isi && h.isi.sessions) || [];
+    if (!sesi.length) { tulis(5, "Belum ada nomor yang tertaut.", "info"); return; }
+    const daftar = sesi.map(s => s.profile + ": " + (s.tertaut ? "tertaut" : "belum tertaut")).join(" | ");
+    tulis(5, daftar, "ok");
+  } catch (e) { tulis(5, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 6. Email
+async function simpanEmail() {
+  const alamat = document.getElementById("email-alamat").value.trim();
+  const sandi = document.getElementById("email-sandi").value.trim();
+  if (!alamat || !sandi) { tulis(6, "Alamat email dan kata sandi aplikasi harus diisi.", "gagal"); return; }
+  tulis(6, "Menyimpan...", "info");
+  try {
+    const h = await kirim("/connections/email", { alamat: alamat, sandi_app: sandi });
+    if (h.kode === 200) {
+      document.getElementById("email-sandi").value = "";
+      tulis(6, "Email berhasil tersambung dan disimpan!", "ok");
+      statusUmum("Email tersimpan.");
+    } else {
+      tulis(6, "Gagal menyimpan: " + ((h.isi && h.isi.detail) || ("kode " + h.kode)), "gagal");
+    }
+  } catch (e) { tulis(6, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 7. Google
+async function hubungkanGoogle() {
+  tulis(7, "Membuka jendela izin Google...", "info");
+  try {
+    const h = await kirim("/connections/google-login", {});
+    tulis(7, h.kode === 200
+      ? "Jendela izin dibuka di peramban. Ikuti petunjuk, lalu klik Cek Koneksi."
+      : "Gagal membuka izin Google (kode " + h.kode + ").",
+      h.kode === 200 ? "info" : "gagal");
+  } catch (e) { tulis(7, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+async function cekKoneksi() {
+  tulis(7, "Memeriksa...", "info");
+  try {
+    const h = await ambil("/connections/accounts");
+    tulis(7, h.kode === 200 ? "Akun tersambung: " + JSON.stringify(h.isi) : "Belum tersambung.",
+          h.kode === 200 ? "ok" : "info");
+  } catch (e) { tulis(7, "Tidak bisa menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+// 8. Selesai
+async function selesaikan() {
+  tulis(8, "Menyelesaikan pemasangan...", "info");
+  try {
+    const h = await kirim("/pemasangan/selesai", {});
+    if (h.kode === 200) {
+      tulis(8, "Pemasangan selesai! Jendela ini dapat ditutup. Selamat menggunakan Harmoni Agent!", "ok");
+      statusUmum("Pemasangan sukses selesai.");
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1200);
+    } else {
+      tulis(8, "Gagal menyelesaikan (kode " + h.kode + ").", "gagal");
+    }
+  } catch (e) { tulis(8, "Gagal menghubungi aplikasi: " + e.message, "gagal"); }
+}
+
+async function cekBerkas() {
+  statusUmum("Memeriksa data...");
+  try {
+    const h = await ambil("/pemasangan/status");
+    if (h.kode !== 200) { statusUmum("Gagal memeriksa (kode " + h.kode + ")."); return; }
+    const d = h.isi || {};
+    const bagian = [];
+    bagian.push(d.otak_ai ? "Otak AI (OK)" : "Otak AI (KOSONG)");
+    bagian.push(d.telegram ? "Telegram (OK)" : "Telegram (-)");
+    bagian.push(d.email ? "Email (OK)" : "Email (-)");
+    bagian.push(d.whatsapp ? "WhatsApp (OK)" : "WhatsApp (-)");
+    bagian.push(d.google ? "Google (OK)" : "Google (-)");
+    statusUmum(bagian.join(" | "));
+  } catch (e) { statusUmum("Gagal memeriksa: " + e.message); }
+}
+
+(async function awal() {
+  try {
+    const p = await ambil("/personalization");
+    if (p.kode === 200 && p.isi) {
+      const data = p.isi.data || p.isi;
+      if (data.app_language) document.getElementById("pilih-bahasa").value = data.app_language;
+      if (data.user_call_name) document.getElementById("nama-pengguna").value = data.user_call_name;
+      if (data.bot_name) document.getElementById("nama-asisten").value = data.bot_name;
+    }
+    cekBerkas();
+  } catch (e) { }
+})();
+</script>
+</body>
+</html>
