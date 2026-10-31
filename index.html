@@ -743,6 +743,10 @@
             <div style="margin-top: 8px; font-size: 0.72rem; color: #6b7280; line-height: 1.3;">
                 Set assistant name, voice style, 12 model providers, and API keys.
             </div>
+        <div class="card-panel" style="margin-top: 12px;">
+            <label for="update-auto-check"><input type="checkbox" id="update-auto-check"> Periksa pembaruan otomatis saat dibuka</label>
+            <button type="button" class="btn-action" id="update-check">Periksa Pembaruan</button>
+            <p id="update-status" role="status" aria-live="polite"></p>
         </div>
     </aside>
 
@@ -1761,6 +1765,35 @@
 
                 <!-- TAB 2: MODEL & PROVIDER -->
                 <div class="tab-pane" id="tab-models" role="tabpanel">
+                    <div id="cp-panel" class="card-panel">
+                        <h3 style="margin-top: 0; font-size: 1rem; color: var(--accent);">Provider OpenAI-compatible kustom</h3>
+                        <p>Simpan profil dahulu. Simpan tidak menghubungi server dan tidak mengaktifkan model. Tes chat/tools dapat berbayar. Endpoint: Chat Completions saja.</p>
+                        <div class="form-row"><label for="cp-profile">Profil tersimpan</label><select id="cp-profile" onchange="cpSelect()"><option value="">Profil baru</option></select></div>
+                        <button type="button" onclick="cpLoad().catch(cpError)">Muat ulang profil</button>
+                        <div class="form-row"><label for="cp-name">Nama provider</label><input id="cp-name" type="text"></div>
+                        <div class="form-row"><label for="cp-url">Base URL (sertakan /v1 bila diperlukan)</label><input id="cp-url" type="url" placeholder="https://api.example.com/v1"></div>
+                        <div class="form-row"><label for="cp-key">API key baru (kosong = pertahankan kunci tersimpan)</label><input id="cp-key" type="password" autocomplete="new-password"></div>
+                        <div class="form-row"><label for="cp-no-auth"><input id="cp-no-auth" type="checkbox">Tanpa autentikasi (misalnya server lokal)</label></div>
+                        <button id="cp-save" type="button" onclick="cpAction('save')">Simpan profil tanpa aktivasi</button>
+                        <button id="cp-delete" type="button" onclick="cpAction('delete')">Hapus profil</button>
+                        <button id="cp-discover" type="button" onclick="cpAction('discover')">Ambil /models dari profil tersimpan</button>
+                        <div class="form-row">
+                            <label for="cp-model-select">Pilih Model dari Hasil Tarikan:</label>
+                            <select id="cp-model-select" onchange="onCpModelSelected(this.value)">
+                                <option value="">-- Klik tombol Ambil /models terlebih dahulu --</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="cp-model">Model ID persis (otomatis terisi atau ketik manual):</label>
+                            <input id="cp-model" type="text" placeholder="Contoh: deepseek-v4-flash-0731">
+                        </div>
+                        <div class="form-row"><label for="cp-model-name">Nama model di menu</label><input id="cp-model-name" type="text"></div>
+                        <button id="cp-chat" type="button" onclick="cpAction('chat')">Tes chat (dapat berbayar)</button>
+                        <button id="cp-tools" type="button" onclick="cpAction('tools')">Tes tool calling terpisah (dapat berbayar)</button>
+                        <button id="cp-add" type="button" onclick="cpAction('add')">Simpan model tanpa tes / aktivasi</button>
+                        <p id="cp-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                        <p>Aktifkan lewat menu Otak AI; cadangan dan spesialis tetap dipilih terpisah. Untuk menghapus profil, hapus modelnya dahulu setelah mengalihkan tugas aktif/cadangan/spesialis.</p>
+                    </div>
                     <div class="setting-desc">
                         Pasang model AI dari 12 provider dunia (9Router lokal, OpenRouter, Gemini, OpenAI, DeepSeek, Groq, Mistral, dll.):
                     </div>
@@ -5739,7 +5772,107 @@
         }
 
         // 6. Modal Pengaturan
+        // CUSTOM PROVIDERS START — no upstream requests on open/select/save.
+        let cpProfiles = [];
+        let cpModelCache = {};
+        const cpEl = id => document.getElementById('cp-' + id);
+        function cpError(error) { cpEl('status').textContent = error.message || 'Operasi gagal.'; }
+        async function cpRequest(path = '', method = 'GET', body) {
+            const response = await fetch('http://127.0.0.1:8001/custom-providers' + path, {
+                method, headers: {'Content-Type': 'application/json'},
+                body: body === undefined ? undefined : JSON.stringify(body)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Input tidak valid.');
+            return result;
+        }
+        async function cpLoad(selected = cpEl('profile').value) {
+            const data = await cpRequest();
+            cpProfiles = data.profiles;
+            cpEl('profile').replaceChildren(new Option('Profil baru', ''));
+            cpProfiles.forEach(p => cpEl('profile').add(new Option(p.name, p.id)));
+            cpEl('profile').value = selected;
+            cpSelect();
+        }
+
+        function onCpModelSelected(val) {
+            if (!val) return;
+            const mInput = cpEl('model');
+            const nInput = cpEl('model-name');
+            if (mInput) mInput.value = val;
+            if (nInput && !nInput.value) {
+                nInput.value = val.replace(/[-_]/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+            }
+        }
+
+        function cpSelect() {
+            const p = cpProfiles.find(p => p.id === cpEl('profile').value);
+            cpEl('name').value = p ? p.name : '';
+            cpEl('url').value = p ? p.base_url : '';
+            cpEl('key').value = '';
+            cpEl('no-auth').checked = p ? p.no_auth : false;
+            const sel = document.getElementById('cp-model-select');
+            const cached = p ? cpModelCache[p.id] : null;
+            if (sel) {
+                if (cached && cached.length > 0) {
+                    sel.innerHTML = '<option value="">-- Pilih dari ' + cached.length + ' Model Tersedia --</option>';
+                    cached.forEach(id => sel.add(new Option(id, id)));
+                } else {
+                    sel.innerHTML = '<option value="">-- Klik tombol Ambil /models terlebih dahulu --</option>';
+                }
+            }
+            cpEl('status').textContent = p ? (p.has_key ? 'Kunci tersimpan; nilainya tidak ditampilkan.' : 'Tanpa autentikasi.') : 'Isi profil baru lalu simpan.';
+        }
+        async function cpAction(action) {
+            // panel disable removed to prevent focus ejection
+            cpEl('status').textContent = 'Memproses...';
+            try {
+                const id = cpEl('profile').value;
+                if (action === 'save') {
+                    const data = await cpRequest('', 'POST', {profile_id: id || null,
+                        name: cpEl('name').value, base_url: cpEl('url').value,
+                        api_key: cpEl('key').value || null, no_auth: cpEl('no-auth').checked});
+                    cpEl('key').value = '';
+                    await cpLoad(data.profile.id);
+                    cpEl('status').textContent = 'Profil tersimpan. Model aktif tidak berubah; belum ada tes jaringan.'; cpEl('save').focus();
+                } else {
+                    if (!id) throw new Error('Pilih dan simpan profil terlebih dahulu.');
+                    const p = cpProfiles.find(p => p.id === id);
+                    if (cpEl('key').value || p.name !== cpEl('name').value || p.base_url !== cpEl('url').value || p.no_auth !== cpEl('no-auth').checked)
+                        throw new Error('Simpan perubahan profil sebelum melanjutkan.');
+                    const path = '/' + encodeURIComponent(id);
+                    if (action === 'delete') {
+                        if (!confirm('Hapus profil provider ini?')) return;
+                        await cpRequest(path, 'DELETE');
+                        await cpLoad('');
+                        cpEl('status').textContent = 'Profil dihapus.';
+                    } else if (action === 'discover') {
+                        const data = await cpRequest(path + '/discover', 'POST');
+                        if (p && data.models) cpModelCache[p.id] = data.models;
+                        const sel = document.getElementById('cp-model-select');
+                        if (sel && data.models && data.models.length > 0) {
+                            sel.innerHTML = '<option value="">-- Pilih dari ' + data.models.length + ' Model Tersedia (' + data.models.length + ' model) --</option>';
+                            data.models.forEach(id => sel.add(new Option(id, id)));
+                            sel.focus();
+                        }
+                        cpEl('status').textContent = 'Berhasil menarik ' + data.models.length + ' model. Silakan pilih dari dropdown di bawah.';
+                    } else if (action === 'add') {
+                        const data = await cpRequest(path + '/models', 'POST', {model_id: cpEl('model').value, display_name: cpEl('model-name').value});
+                        await fetchModels();
+                        cpEl('status').textContent = 'Model nomor ' + data.info.entry_id + ' tersimpan tanpa aktivasi/tes. Pilih dari menu Otak AI untuk mengaktifkan.'; cpEl('add').focus();
+                    } else {
+                        if (!confirm('Tes ini mengirim permintaan ke provider dan dapat berbayar. Lanjutkan?')) return;
+                        const data = await cpRequest(path + '/test', 'POST', {model_id: cpEl('model').value, tools: action === 'tools'});
+                        cpEl('status').textContent = action === 'tools' ? (data.result.tools ? 'Tool calling terverifikasi.' : 'Chat berhasil, tool calling tidak terverifikasi.') : 'Chat berhasil. Tool calling belum diuji.';
+                    }
+                }
+            } catch (error) { cpError(error); }
+            finally { /* fokus tetap di dalam modal */ }
+        }
+        // CUSTOM PROVIDERS END
+
         async function openSettingsModal() {
+            cpLoad().catch(cpError);
             settingsModal.classList.add("active");
             settingsModal.removeAttribute("hidden");
             document.getElementById("modal-title").focus();
@@ -7637,5 +7770,68 @@
         }
         setTimeout(() => { userInput.focus(); }, 300);
     </script>
+<script>
+// Pembaruan hanya aktif di aplikasi desktop; tidak pernah menjalankan installer tanpa persetujuan.
+(function () {
+    const status = document.getElementById('update-status');
+    const checkbox = document.getElementById('update-auto-check');
+    const button = document.getElementById('update-check');
+    if (!status || !checkbox || !button) return;
+    async function check(silent) {
+        const api = window.pywebview && window.pywebview.api;
+        if (!api || !api.check) {
+            if (!silent) status.textContent = 'Pembaruan hanya tersedia di aplikasi desktop.';
+            return;
+        }
+        status.textContent = 'Memeriksa pembaruan…';
+        button.setAttribute('aria-busy', 'true');
+        try {
+            const result = await api.check();
+            if (result.error) throw new Error(result.error);
+            if (!result.available) {
+                status.textContent = 'Aplikasi sudah versi terbaru.';
+                return;
+            }
+            const release = result.available;
+            status.textContent = 'Pembaruan versi ' + release.version + ' tersedia.';
+            // Native WebView confirmation is keyboard accessible and announces the release notes.
+            if (!window.confirm('Pembaruan Harmoni Agent v' + release.version + ' tersedia.\n\n' +
+                (release.notes || 'Tidak ada catatan rilis.') + '\n\nUnduh installer sekarang?')) return;
+            status.textContent = 'Mengunduh dan memverifikasi SHA-256 installer…';
+            const downloaded = await api.download();
+            if (downloaded.error) throw new Error(downloaded.error);
+            status.textContent = 'Installer terverifikasi. Menunggu persetujuan pemasangan.';
+            if (!window.confirm('Installer v' + release.version + ' sudah diverifikasi SHA-256. Jalankan installer sekarang?\nAplikasi lain tidak akan ditutup.')) return;
+            const installed = await api.install();
+            if (installed.error) throw new Error(installed.error);
+            status.textContent = 'Installer dibuka. Ikuti petunjuk pemasangan Windows.';
+        } catch (error) {
+            status.textContent = 'Pembaruan gagal: ' + error.message;
+        } finally {
+            button.removeAttribute('aria-busy');
+        }
+    }
+    button.addEventListener('click', () => check(false));
+    checkbox.addEventListener('change', async () => {
+        try {
+            const result = await window.pywebview.api.set_auto_check(checkbox.checked);
+            checkbox.checked = result.auto_check;
+            status.textContent = checkbox.checked ? 'Pemeriksaan otomatis diaktifkan.' : 'Pemeriksaan otomatis dimatikan.';
+        } catch (error) {
+            checkbox.checked = !checkbox.checked;
+            status.textContent = 'Gagal menyimpan pilihan pembaruan.';
+        }
+    });
+    window.addEventListener('pywebviewready', async () => {
+        try {
+            const settings = await window.pywebview.api.settings();
+            checkbox.checked = settings.auto_check;
+            if (settings.auto_check) check(true);
+        } catch (error) {
+            status.textContent = 'Pengaturan pembaruan tidak dapat dibaca.';
+        }
+    });
+})();
+</script>
 </body>
 </html>

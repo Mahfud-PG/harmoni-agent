@@ -1268,11 +1268,8 @@ class ReasoningLayer:
 
         # Periksa apakah chosen_model_id adalah model kustom (OpenRouter / 9Router / lainnya) di konfigurasi
         cfg_models = load_model_config().get("available_models", {})
-        active_custom_entry = None
-        for m_entry in cfg_models.values():
-            if m_entry.get("id") == chosen_model_id:
-                active_custom_entry = m_entry
-                break
+        active_custom_entry = cfg_models.get(str(task_info.get('id')))
+        custom_profile_selected = bool(active_custom_entry and active_custom_entry.get('provider', '').startswith('custom-'))
 
         # Jika model adalah model kustom (9Router / OpenRouter / provider lain), HARUS selalu menimpa model bawaan
         # agar tidak tertabrak nama ID yang sama (misalnya 'gemini-2.5-pro' milik Google Gemini resmi)
@@ -1328,8 +1325,8 @@ class ReasoningLayer:
                 c_key = "ollama"
                 c_base_url = c_base_url or "http://localhost:11434/v1"
             else:
-                c_key = active_custom_entry.get("api_key") or openrouter_key or openai_key
-                c_base_url = c_base_url or "https://openrouter.ai/api/v1"
+                # Unknown providers must never borrow another provider's credentials.
+                c_key = None
 
             if c_key:
                 model_candidates[chosen_model_id] = {
@@ -1369,7 +1366,12 @@ class ReasoningLayer:
         keys_for_chosen = get_provider_keys(prov_origin)
 
         # Jika provider mendukung multi-kunci dan pengguna mengisi > 1 akun:
-        if prov_origin in ["9router", "ninerouter", "antigravity"]:
+        if custom_profile_selected:
+            from sari_core.custom_providers import registry
+            providers.append({'nama': active_custom_entry['name'],
+                              'client': registry().client(active_custom_entry['provider']),
+                              'model': active_custom_entry['id'], 'type': 'openai', 'custom_profile': True})
+        elif prov_origin in ["9router", "ninerouter", "antigravity"]:
             if chosen_model_id in model_candidates:
                 providers.append(model_candidates[chosen_model_id])
         elif len(keys_for_chosen) > 1:
@@ -1398,7 +1400,14 @@ class ReasoningLayer:
         fallback_model_id = cfg_data.get("fallback_model", "deepseek-flash")
         
         cand_fallback = None
-        if fallback_model_id in model_candidates:
+        fallback_entry = cfg_models.get(str(cfg_data.get('fallback_id')))
+        if fallback_entry and fallback_entry.get('provider', '').startswith('custom-'):
+            from sari_core.custom_providers import registry
+            if str(cfg_data.get('fallback_id')) != str(task_info.get('id')):
+                cand_fallback = {'nama': fallback_entry['name'],
+                                 'client': registry().client(fallback_entry['provider']),
+                                 'model': fallback_entry['id'], 'type': 'openai', 'custom_profile': True}
+        elif fallback_model_id in model_candidates:
             cand_fallback = model_candidates[fallback_model_id]
         else:
             for m_entry in cfg_models.values():
@@ -1425,8 +1434,8 @@ class ReasoningLayer:
                         fb_key = os.getenv("SAMBANOVA_API_KEY")
                         fb_base = fb_base or "https://api.sambanova.ai/v1"
                     else:
-                        fb_key = openrouter_key or deepseek_key
-                        fb_base = fb_base or "https://openrouter.ai/api/v1"
+                        # Fail closed rather than sending an unrelated key to this host.
+                        continue
 
                     cand_fallback = {
                         "nama": m_entry.get("name", fallback_model_id),
@@ -1506,7 +1515,7 @@ class ReasoningLayer:
                     }
                     
             except Exception as e:
-                err_msg = str(e)
+                err_msg = str(e) if not provider.get('custom_profile') else 'Provider kustom gagal; periksa URL, autentikasi, model dan dukungan fitur.'
                 if idx == 0:
                     primary_error = err_msg
                 last_error = f"{provider['nama']}: {err_msg}"

@@ -100,8 +100,8 @@ def save_model_config(data: dict) -> bool:
     """Menyimpan konfigurasi model ke file JSON secara aman."""
     try:
         os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        from sari_core.custom_providers import atomic_json
+        atomic_json(CONFIG_PATH, data)
         return True
     except Exception as e:
         logger.error(f"Gagal menyimpan konfigurasi model: {e}")
@@ -400,6 +400,12 @@ def verify_and_add_model(model_id: str, display_name: str = "", provider: str = 
     Melakukan health-check (tes ping) ke model baru sebelum mendaftarkannya secara permanen ke menu.
     Jika sukses, model otomatis mendapatkan nomor urut baru (misal 7, 8, dst).
     """
+    if provider.startswith('custom-'):
+        try:
+            entry = add_profile_model(provider, model_id, display_name)
+            return True, 'Model tersimpan tanpa tes/aktivasi; gunakan tes profil secara eksplisit.', entry
+        except ValueError as error:
+            return False, str(error), {}
     from openai import OpenAI
     cfg = load_model_config()
     models = cfg.get("available_models", DEFAULT_CONFIG["available_models"])
@@ -511,51 +517,51 @@ def verify_and_add_model(model_id: str, display_name: str = "", provider: str = 
     else:
         return False, "Gagal menyimpan konfigurasi model ke file JSON.", {}
 
-def remove_custom_model(target_id: str) -> tuple[bool, str]:
-    """Menghapus model tambahan dari daftar menu. Model inti 1-6 diproteksi permanen."""
-    target_clean = str(target_id).strip()
-    
-    # Proteksi model inti
-    if target_clean in ["1", "2", "3", "4", "5", "6"]:
-        return False, f"❌ Model nomor {target_clean} adalah model inti bawaan sistem dan diproteksi agar tidak bisa dihapus."
-        
+def add_profile_model(profile_id, model_id, display_name=''):
+    from sari_core.custom_providers import registry, config_lock
+    if not model_id or model_id != model_id.strip():
+        raise ValueError('Model ID wajib diisi persis tanpa spasi tepi.')
+    with config_lock(PROJECT_ROOT):
+        profile = registry().resolve(profile_id)
+        cfg = load_model_config()
+        models = cfg['available_models']
+        for entry in models.values():
+            if entry.get('provider') == profile_id and entry['id'] == model_id:
+                raise ValueError('Model sudah terdaftar pada profil ini.')
+        entry_id = str(max([int(k) for k in models if k.isdigit()] or [6]) + 1)
+        entry = {'id': model_id, 'provider': profile_id, 'name': display_name or model_id,
+                 'desc': 'OpenAI-compatible: ' + profile['name'], 'custom': True}
+        models[entry_id] = entry
+        if not save_model_config(cfg):
+            raise ValueError('Gagal menyimpan model.')
+        return entry | {'entry_id': entry_id}
+
+
+def delete_provider_profile(profile_id):
+    from sari_core.custom_providers import registry
     cfg = load_model_config()
-    models = cfg.get("available_models", {})
-    
-    if target_clean not in models:
-        return False, f"❌ Model nomor {target_clean} tidak ditemukan di daftar menu."
-        
-    deleted_name = models[target_clean].get("name", target_clean)
-    del models[target_clean]
+    if any(m.get('provider') == profile_id for m in cfg['available_models'].values()):
+        raise ValueError('Hapus model milik profil terlebih dahulu (alihkan model aktif/cadangan/spesialis).')
+    registry().delete(profile_id)
 
-    # Re-indeks nomor model kustom (nomor 7 ke atas) agar urut dan tidak bolong
-    core_models = {k: v for k, v in models.items() if int(k) <= 6}
-    custom_models = [v for k, v in sorted(models.items(), key=lambda x: int(x[0])) if int(k) > 6]
 
-    new_available = dict(core_models)
-    curr_active_id = str(cfg.get("active_id", "1"))
-    new_active_id = curr_active_id
-    active_obj = models.get(curr_active_id)
+def remove_custom_model(target_id: str) -> tuple[bool, str]:
+    target = str(target_id)
+    from sari_core.custom_providers import config_lock
+    with config_lock(PROJECT_ROOT):
+        cfg = load_model_config()
+        if target in ('1', '2', '3', '4', '5', '6'):
+            return False, 'Model bawaan tidak dapat dihapus.'
+        if target not in cfg['available_models']:
+            return False, 'Model tidak ditemukan.'
+        used = [str(cfg.get('active_id')), str(cfg.get('fallback_id'))] + list(cfg.get('specialists', {}).values())
+        if target in used:
+            return False, 'Alihkan model aktif/cadangan/spesialis sebelum menghapus.'
+        del cfg['available_models'][target]
+        if save_model_config(cfg):
+            return True, 'Model dihapus; ID model lain tetap.'
+        return False, 'Gagal menyimpan model.'
 
-    for idx, cm in enumerate(custom_models, start=7):
-        new_key = str(idx)
-        new_available[new_key] = cm
-        if cm == active_obj:
-            new_active_id = new_key
-
-    # Jika model yang dihapus sedang aktif, kembalikan ke model 1 (Gemini 3.8 Flash)
-    if curr_active_id == target_clean:
-        new_active_id = "1"
-        cfg["active_model"] = new_available.get("1", {}).get("id", "gemini-3.8-flash")
-        cfg["active_provider"] = new_available.get("1", {}).get("provider", "gemini")
-        cfg["display_name"] = new_available.get("1", {}).get("name", "Google Gemini 3.8 Flash")
-
-    cfg["active_id"] = new_active_id
-    cfg["available_models"] = new_available
-    if save_model_config(cfg):
-        return True, f"✅ Model nomor {target_clean} (**{deleted_name}**) berhasil dihapus. Nomor model kustom otomatis diurutkan rapi."
-    else:
-        return False, "❌ Gagal menyimpan perubahan ke file JSON."
 
 PROVIDER_KEY_VARS = {
     "gemini": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],

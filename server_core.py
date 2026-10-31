@@ -26,7 +26,8 @@ from sari_core.paths import DATA_ROOT  # folder data pengguna
 AI_ASISTEN_DIR = DATA_ROOT
 
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request, Depends
+from pydantic import SecretStr
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -88,6 +89,99 @@ class AddModelRequest(BaseModel):
     model_id: str
     display_name: str = ""
     provider: str = "openrouter"
+
+class CustomProviderRequest(BaseModel):
+    profile_id: Optional[str] = None
+    name: str
+    base_url: str
+    api_key: Optional[SecretStr] = None
+    no_auth: bool = False
+
+class CustomProbeRequest(BaseModel):
+    model_id: str
+    tools: bool = False
+
+class CustomModelRequest(BaseModel):
+    model_id: str
+    display_name: str = ''
+
+
+def _custom_local_access(request: Request):
+    # Desktop gateway has no login middleware. Limit new credential operations
+    # to loopback clients and trusted desktop/local origins, not wildcard CORS.
+    from urllib.parse import urlsplit
+    if not request.client or request.client.host not in ('127.0.0.1', '::1'):
+        raise HTTPException(403, 'Pengaturan provider hanya melalui aplikasi lokal.')
+    origin = request.headers.get('origin')
+    if origin and origin != 'null':
+        parsed = urlsplit(origin)
+        if parsed.scheme not in ('http', 'https') or parsed.hostname not in ('127.0.0.1', 'localhost', '::1'):
+            raise HTTPException(403, 'Origin tidak diizinkan.')
+
+
+@app.get('/custom-providers', dependencies=[Depends(_custom_local_access)])
+def custom_provider_list():
+    from sari_core.custom_providers import registry
+    try:
+        return {'status': 'success', 'profiles': registry().list()}
+    except Exception:
+        raise HTTPException(400, 'Penyimpanan profil tidak dapat dibaca.') from None
+
+
+@app.post('/custom-providers', dependencies=[Depends(_custom_local_access)])
+def custom_provider_save(req: CustomProviderRequest):
+    from sari_core.custom_providers import registry
+    try:
+        profile = registry().save(profile_id=req.profile_id, name=req.name,
+            base_url=req.base_url, no_auth=req.no_auth,
+            api_key=req.api_key.get_secret_value() if req.api_key else None)
+        return {'status': 'success', 'profile': profile}
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    except Exception:
+        raise HTTPException(400, 'Gagal menyimpan profil.') from None
+
+
+@app.delete('/custom-providers/{profile_id}', dependencies=[Depends(_custom_local_access)])
+def custom_provider_delete(profile_id: str):
+    from sari_core.model_config import delete_provider_profile
+    try:
+        delete_provider_profile(profile_id)
+        return {'status': 'success'}
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    except Exception:
+        raise HTTPException(400, 'Gagal menghapus profil.') from None
+
+
+@app.post('/custom-providers/{profile_id}/discover', dependencies=[Depends(_custom_local_access)])
+def custom_provider_discover(profile_id: str):
+    from sari_core.custom_providers import registry
+    try:
+        return {'status': 'success', 'models': registry().discover(profile_id)}
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+
+
+@app.post('/custom-providers/{profile_id}/test', dependencies=[Depends(_custom_local_access)])
+def custom_provider_test(profile_id: str, req: CustomProbeRequest):
+    from sari_core.custom_providers import registry
+    try:
+        return {'status': 'success', 'result': registry().probe(profile_id, req.model_id, req.tools)}
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+
+
+@app.post('/custom-providers/{profile_id}/models', dependencies=[Depends(_custom_local_access)])
+def custom_provider_add_model(profile_id: str, req: CustomModelRequest):
+    from sari_core.model_config import add_profile_model
+    try:
+        return {'status': 'success', 'info': add_profile_model(profile_id, req.model_id, req.display_name)}
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    except Exception:
+        raise HTTPException(400, 'Gagal menyimpan model.') from None
+
 
 class RemoveModelRequest(BaseModel):
     target_id: str
@@ -575,6 +669,9 @@ def add_model_endpoint(req: AddModelRequest):
         model_id = req.model_id.strip()
         display_name = req.display_name.strip()
         provider = req.provider.strip().lower()
+
+        if provider.startswith('custom-'):
+            raise HTTPException(400, 'Gunakan endpoint /custom-providers/{profile_id}/models untuk profil kustom.')
 
         # Deteksi otomatis pintar sama persis seperti di bot_otomatis.py
         full_lower = f"{model_id} {display_name} {provider}".lower()

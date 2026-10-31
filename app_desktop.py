@@ -6,6 +6,53 @@ import urllib.request
 from pathlib import Path
 import webview
 
+APP_VERSION = "1.0.1"  # Keep aligned with the installer and release tag.
+
+
+class DesktopUpdateAPI:
+    """Only expose explicit updater operations to the local desktop WebView."""
+
+    def __init__(self, data_dir):
+        self.manager = UpdateManager(data_dir)
+        self.available = None
+        self.staged = None
+
+    def settings(self):
+        return {"auto_check": self.manager.enabled(), "version": APP_VERSION}
+
+    def set_auto_check(self, enabled):
+        return {"auto_check": self.manager.set_enabled(enabled is True)}
+
+    def check(self):
+        self.available = None
+        self.staged = None
+        try:
+            self.available = self.manager.check(APP_VERSION)
+            return {"available": self.available}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    def download(self):
+        if not self.available:
+            return {"error": "Periksa pembaruan terlebih dahulu."}
+        try:
+            self.staged = self.manager.download(self.available)
+            return {"ready": True, "version": self.available["version"]}
+        except Exception as exc:
+            self.staged = None
+            return {"error": str(exc)}
+
+    def install(self):
+        if not self.staged or not self.available:
+            return {"error": "Unduh dan verifikasi installer terlebih dahulu."}
+        try:
+            self.manager.install(self.staged, self.available["sha256"])
+            self.staged = None  # Prevent a second launch without another download.
+            return {"launched": True}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+
 CURRENT_DIR = Path(__file__).parent.resolve()
 
 # PENTING: folder program harus masuk sys.path DULU.
@@ -18,6 +65,9 @@ CURRENT_DIR = Path(__file__).parent.resolve()
 # menyalakannya); kalau layanan sudah jalan, baris itu tidak pernah tersentuh.
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
+
+from update_manager import UpdateManager
+
 
 def ensure_backend_alive():
     """Cek apakah service background sudah hidup. Jika belum, nyalakan."""
@@ -67,8 +117,10 @@ def main():
     except Exception:
         pass
 
+    user_data = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "HarmoniAgent"
     window = webview.create_window(
         title="Harmoni Agent",
+        js_api=DesktopUpdateAPI(user_data),
         url=str(ui_html_path),
         width=1000,
         height=720,
